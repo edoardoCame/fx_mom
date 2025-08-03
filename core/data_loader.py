@@ -8,6 +8,9 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from typing import Optional, List
+import yfinance as yf
+import warnings
+warnings.filterwarnings('ignore')
 
 def load_forex_data(data_path: str, validate: bool = True) -> pd.DataFrame:
     """
@@ -236,6 +239,122 @@ def get_asset_names(data: pd.DataFrame) -> dict:
         'commodities': sorted(commodities),
         'all': sorted(forex_pairs + commodities)
     }
+
+def download_extended_forex_data(start_date: str = "2000-01-01", 
+                               end_date: str = "2025-12-31",
+                               save_path: str = "data/forex_extended_data.parquet") -> pd.DataFrame:
+    """
+    Download extended forex data from Yahoo Finance from 2000 to present.
+    
+    Parameters:
+    -----------
+    start_date : str
+        Start date in 'YYYY-MM-DD' format
+    end_date : str  
+        End date in 'YYYY-MM-DD' format
+    save_path : str
+        Path to save the downloaded data
+        
+    Returns:
+    --------
+    pd.DataFrame
+        Extended forex price data with OHLC columns
+    """
+    # Major forex pairs with USD base (Yahoo Finance format)
+    forex_symbols = [
+        'EURUSD=X',   # EUR/USD
+        'GBPUSD=X',   # GBP/USD  
+        'USDJPY=X',   # USD/JPY
+        'USDCHF=X',   # USD/CHF
+        'AUDUSD=X',   # AUD/USD
+        'USDCAD=X',   # USD/CAD
+        'NZDUSD=X',   # NZD/USD
+        'EURGBP=X',   # EUR/GBP
+        'EURJPY=X',   # EUR/JPY
+        'GBPJPY=X',   # GBP/JPY
+        'CHFJPY=X',   # CHF/JPY
+        'EURCHF=X',   # EUR/CHF
+        'AUDJPY=X',   # AUD/JPY
+        'CADJPY=X',   # CAD/JPY
+        'NZDJPY=X',   # NZD/JPY
+        'GBPCHF=X',   # GBP/CHF
+        'AUDCAD=X',   # AUD/CAD
+        'AUDCHF=X',   # AUD/CHF
+        'CADCHF=X',   # CAD/CHF
+        'EURCAD=X',   # EUR/CAD
+        'EURAUD=X',   # EUR/AUD
+        'GBPCAD=X',   # GBP/CAD
+    ]
+    
+    print(f"📊 Downloading forex data from {start_date} to {end_date}...")
+    print(f"🔄 Downloading {len(forex_symbols)} forex pairs...")
+    
+    all_data = {}
+    successful_downloads = 0
+    
+    for i, symbol in enumerate(forex_symbols):
+        try:
+            # Clean symbol name for column naming
+            pair_name = symbol.replace('=X', '').replace('USD', 'USD')
+            if not pair_name.endswith('USD') and not pair_name.startswith('USD'):
+                # For cross pairs like EURGBP, keep as is
+                clean_pair = pair_name
+            elif pair_name.startswith('USD'):
+                # For USD/XXX pairs, keep as USDXXX
+                clean_pair = pair_name
+            else:
+                # For XXX/USD pairs, keep as XXXUSD
+                clean_pair = pair_name
+                
+            print(f"  📈 Downloading {symbol} as {clean_pair}... ({i+1}/{len(forex_symbols)})")
+            
+            # Download data
+            ticker = yf.Ticker(symbol)
+            data = ticker.history(start=start_date, end=end_date)
+            
+            if len(data) > 0:
+                # Rename columns to match our format
+                data.columns = [f"{clean_pair}_{col}" for col in data.columns]
+                all_data[clean_pair] = data
+                successful_downloads += 1
+                print(f"    ✓ Downloaded {len(data)} days of data")
+            else:
+                print(f"    ❌ No data available for {symbol}")
+                
+        except Exception as e:
+            print(f"    ❌ Failed to download {symbol}: {str(e)}")
+            continue
+    
+    if successful_downloads == 0:
+        raise ValueError("No forex data could be downloaded!")
+    
+    print(f"\n✅ Successfully downloaded {successful_downloads}/{len(forex_symbols)} forex pairs")
+    
+    # Combine all data
+    print("🔄 Combining and synchronizing data...")
+    combined_data = pd.concat(all_data.values(), axis=1)
+    
+    # Remove any completely empty rows
+    combined_data = combined_data.dropna(how='all')
+    
+    # Forward fill missing values (common in forex weekend gaps)
+    combined_data = combined_data.fillna(method='ffill')
+    
+    # Remove any remaining NaN rows at the beginning
+    combined_data = combined_data.dropna(how='all')
+    
+    # Ensure index is datetime
+    combined_data.index = pd.to_datetime(combined_data.index)
+    
+    # Save to parquet
+    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+    combined_data.to_parquet(save_path)
+    
+    print(f"✅ Extended forex data saved to: {save_path}")
+    print(f"📊 Final dataset: {len(combined_data):,} days, {len(combined_data.columns)} columns")
+    print(f"📅 Date range: {combined_data.index.min().date()} to {combined_data.index.max().date()}")
+    
+    return combined_data
 
 def validate_data_quality(data: pd.DataFrame) -> dict:
     """
