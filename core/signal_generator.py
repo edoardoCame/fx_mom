@@ -355,6 +355,177 @@ def generate_contrarian_risk_parity_signals(price_data: pd.DataFrame, lookback_d
     
     return signals
 
+def generate_contrarian_signals_with_filter(price_data: pd.DataFrame, lookback_days: int = 30,
+                                          top_n: int = 5, rebalance_freq: str = 'weekly') -> pd.DataFrame:
+    """
+    Generate contrarian trading signals with weekly performance filter.
+    
+    Simple filter logic: If portfolio loses money in a week, set all weights to zero for next week.
+    
+    Parameters:
+    -----------
+    price_data : pd.DataFrame
+        Price data with columns for each currency pair (OHLC format)
+    lookback_days : int
+        Number of days to look back for momentum calculation
+    top_n : int
+        Number of top/bottom momentum pairs to select
+    rebalance_freq : str
+        Rebalancing frequency ('weekly' recommended for filter)
+        
+    Returns:
+    --------
+    pd.DataFrame
+        Trading signals with performance filter applied
+    """
+    # Step 1: Generate base contrarian signals (inverted momentum)
+    print(f"🔄 Generating base contrarian signals ({lookback_days}d lookback)...")
+    
+    # Get currency pairs - extract only Close prices
+    all_columns = price_data.columns
+    close_columns = [col for col in all_columns if col.endswith('_Close')]
+    currency_pairs = [col.replace('_Close', '') for col in close_columns]
+    signal_columns = [f"{pair}_weight" for pair in currency_pairs]
+    
+    # Initialize signals dataframe
+    signals = pd.DataFrame(0.0, index=price_data.index, columns=signal_columns)
+    
+    # Calculate momentum using only Close prices
+    close_prices = price_data[close_columns]
+    close_prices.columns = currency_pairs
+    momentum_data = close_prices.pct_change(periods=lookback_days).fillna(0)
+    
+    # Get rebalancing dates (Fridays for weekly)
+    if rebalance_freq == 'weekly':
+        rebalance_dates = price_data.index[price_data.index.weekday == 4]
+    else:
+        rebalance_dates = price_data.index
+    
+    # Step 2: Generate base contrarian signals
+    for date in rebalance_dates:
+        if date in momentum_data.index:
+            momentum_values = momentum_data.loc[date]
+            
+            # Skip if insufficient data
+            if momentum_values.isna().sum() > len(momentum_values) * 0.5:
+                continue
+                
+            momentum_values = momentum_values.dropna()
+            if len(momentum_values) < top_n * 2:
+                continue
+            
+            # Sort by momentum for CONTRARIAN strategy (ascending = long losers)
+            sorted_momentum = momentum_values.sort_values(ascending=True)
+            
+            # CONTRARIAN: Long the biggest LOSERS, Short the biggest WINNERS
+            top_losers = sorted_momentum.head(top_n).index  # Bottom momentum = Long
+            top_winners = sorted_momentum.tail(top_n).index  # Top momentum = Short
+            
+            # Set period for signals
+            current_idx = price_data.index.get_loc(date)
+            if rebalance_freq == 'weekly':
+                next_rebalance_dates = rebalance_dates[rebalance_dates > date]
+                if len(next_rebalance_dates) > 0:
+                    next_date = next_rebalance_dates[0]
+                    next_idx = price_data.index.get_loc(next_date)
+                else:
+                    next_idx = len(price_data)
+            else:
+                next_idx = current_idx + 1
+            
+            period_range = price_data.index[current_idx:next_idx]
+            
+            for period_date in period_range:
+                if period_date in signals.index:
+                    # CONTRARIAN positions
+                    top_loser_cols = [f"{pair}_weight" for pair in top_losers]
+                    top_winner_cols = [f"{pair}_weight" for pair in top_winners]
+                    
+                    signals.loc[period_date, top_loser_cols] = 0.2   # Long losers
+                    signals.loc[period_date, top_winner_cols] = -0.2  # Short winners
+    
+    print(f"✓ Base contrarian signals generated")
+    
+    # Step 3: Apply Weekly Performance Filter
+    print(f"🔍 Applying weekly performance filter...")
+    
+    filtered_signals = signals.copy()
+    filter_activations = 0
+    
+    # Calculate weekly portfolio returns using close prices
+    portfolio_returns = pd.Series(0.0, index=price_data.index)
+    
+    for i in range(1, len(price_data)):
+        date = price_data.index[i]
+        prev_date = price_data.index[i-1]
+        
+        if date in signals.index and prev_date in signals.index:
+            # Get previous day's weights
+            prev_weights = signals.loc[prev_date]
+            
+            # Calculate daily returns for each pair
+            daily_returns = {}
+            for pair in currency_pairs:
+                close_col = f"{pair}_Close"
+                if close_col in price_data.columns:
+                    price_today = price_data.loc[date, close_col]
+                    price_yesterday = price_data.loc[prev_date, close_col]
+                    if price_yesterday != 0 and not pd.isna(price_today) and not pd.isna(price_yesterday):
+                        daily_returns[pair] = (price_today / price_yesterday) - 1
+                    else:
+                        daily_returns[pair] = 0.0
+                else:
+                    daily_returns[pair] = 0.0
+            
+            # Calculate portfolio return for this day
+            portfolio_return = 0.0
+            for pair in currency_pairs:
+                weight_col = f"{pair}_weight"
+                if weight_col in prev_weights.index:
+                    weight = prev_weights[weight_col]
+                    pair_return = daily_returns.get(pair, 0.0)
+                    portfolio_return += weight * pair_return
+            
+            portfolio_returns.loc[date] = portfolio_return
+    
+    # Apply filter: check performance every Friday and adjust next week's signals
+    for i, date in enumerate(rebalance_dates):
+        if i == 0:  # Skip first rebalancing date (no previous week to check)
+            continue
+            
+        # Get previous rebalancing date
+        prev_rebalance_date = rebalance_dates[i-1]
+        
+        # Calculate week return from prev rebalance to current rebalance
+        week_dates = price_data.index[(price_data.index > prev_rebalance_date) & 
+                                     (price_data.index <= date)]
+        
+        if len(week_dates) > 0:
+            week_return = portfolio_returns.loc[week_dates].sum()  # Sum daily returns for week
+            
+            # If week was negative, zero out next week's signals
+            if week_return < 0:
+                filter_activations += 1
+                
+                # Find next rebalancing period
+                current_idx = price_data.index.get_loc(date)
+                next_rebalance_dates = rebalance_dates[rebalance_dates > date]
+                if len(next_rebalance_dates) > 0:
+                    next_date = next_rebalance_dates[0]
+                    next_idx = price_data.index.get_loc(next_date)
+                else:
+                    next_idx = len(price_data)
+                
+                # Zero out signals for next week
+                next_week_range = price_data.index[current_idx:next_idx]
+                filtered_signals.loc[next_week_range, :] = 0.0
+    
+    print(f"✓ Performance filter applied")
+    print(f"📊 Filter activations: {filter_activations} weeks out of {len(rebalance_dates)-1} total weeks")
+    print(f"📈 Filter rate: {filter_activations/(len(rebalance_dates)-1)*100:.1f}% of weeks filtered")
+    
+    return filtered_signals
+
 def validate_signals(signals: pd.DataFrame) -> dict:
     """
     Perform comprehensive signal validation.
