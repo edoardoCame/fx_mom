@@ -9,7 +9,10 @@
       "Bash(mv:*)",
       "Bash(cp:*)",
       "Bash(jupyter nbconvert:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
