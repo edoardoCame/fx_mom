@@ -4,7 +4,7 @@
 		{
 			"type": "shell",
 			"label": "Download nuovo database commodities esteso",
-			"command": "python3 download_extended_commodities.py",
+			"command": "python3 scripts/download_extended_commodities.py",
 			"group": "build",
 			"problemMatcher": [],
 			"isBackground": false

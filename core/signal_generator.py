@@ -165,8 +165,9 @@ def generate_momentum_signals(price_data: pd.DataFrame, lookback_days: int = 30,
             else:
                 next_idx = current_idx + 1
             
-            # Apply signals for the period
-            period_range = price_data.index[current_idx:next_idx]
+            # Apply signals for the period STARTING FROM NEXT DAY (avoid lookahead bias)
+            # Signals calculated on Friday should be applied starting from Monday
+            period_range = price_data.index[current_idx+1:next_idx]
             
             for period_date in period_range:
                 if period_date in signals.index:
@@ -319,8 +320,8 @@ def generate_contrarian_risk_parity_signals(price_data: pd.DataFrame, lookback_d
             else:
                 next_idx = current_idx + 1
             
-            # Apply signals for the period
-            period_range = price_data.index[current_idx:next_idx]
+            # Apply signals for the period STARTING FROM NEXT DAY (avoid lookahead bias)
+            period_range = price_data.index[current_idx+1:next_idx]
             
             for period_date in period_range:
                 if period_date in signals.index:
@@ -433,7 +434,7 @@ def generate_contrarian_signals_with_filter(price_data: pd.DataFrame, lookback_d
             else:
                 next_idx = current_idx + 1
             
-            period_range = price_data.index[current_idx:next_idx]
+            period_range = price_data.index[current_idx+1:next_idx]
             
             for period_date in period_range:
                 if period_date in signals.index:

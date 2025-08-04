@@ -23,17 +23,28 @@ This system generates trading signals based on momentum indicators and simulates
 
 ```
 fx_mom/
-├── core/                           # Core trading engine
-│   ├── data_loader.py             # Data loading and validation
-│   ├── signal_generator.py        # Trading signal generation
-│   └── backtest_engine.py         # Numba-optimized backtesting
-├── data/                          # Market data storage
+├── core/                          # Core trading engine modules
+│   ├── __init__.py
+│   ├── data_loader.py            # Data loading and validation
+│   ├── signal_generator.py       # Trading signal generation
+│   ├── backtest_engine.py        # Numba-optimized backtesting
+│   └── commodity_momentum.py     # Commodity momentum strategies
+├── notebooks/                    # Analysis and strategy notebooks
+│   ├── main.ipynb                # Main analysis notebook
+│   ├── momentum_long_only.ipynb  # Momentum-only strategy
+│   ├── contrarian_strategy.ipynb # Contrarian strategy analysis
+│   ├── commodity_momentum_clean.ipynb    # Commodity momentum analysis
+│   ├── contrarian_momentum_clean.ipynb   # Contrarian momentum on commodities
+│   ├── contrarian_filtered_strategy.ipynb # Filtered contrarian strategy
+│   └── contrarian_vol_scaling.ipynb      # Volatility-scaled contrarian
+├── scripts/                      # Data fetching and utilities
+│   ├── download_extended_data.py     # Forex data fetching
+│   └── download_extended_commodities.py # Commodity data fetching
+├── data/                         # Market data storage
 │   ├── forex_synchronized_data.parquet
-│   └── forex_extended_data.parquet
-├── main.ipynb                     # Main analysis notebook
-├── momentum_long_only.ipynb       # Momentum-only strategy
-├── contrarian_strategy.ipynb      # Contrarian strategy analysis
-└── download_extended_data.py      # Data fetching utilities
+│   ├── forex_extended_data.parquet
+│   └── commodities_extended_data.parquet
+└── strategies/                   # Strategy implementations (future)
 ```
 
 ## 🚀 Quick Start
@@ -52,11 +63,16 @@ pip install -r requirements.txt
 ### Basic Usage
 
 ```python
-# Load the core modules
-from core import BacktestEngine, load_forex_data, generate_momentum_signals
+# Navigate to the project directory and import core modules
+import sys
+sys.path.append('core')
+
+from data_loader import load_forex_data, load_forex_and_commodities_data
+from signal_generator import generate_momentum_signals
+from backtest_engine import BacktestEngine
 
 # Load synchronized forex data
-df = load_forex_data()
+df = load_forex_data('data/forex_synchronized_data.parquet')
 
 # Generate momentum signals (30-day lookback)
 signals = generate_momentum_signals(df, lookback_days=30)
@@ -70,17 +86,41 @@ print(f"Sharpe Ratio: {results['sharpe_ratio']:.2f}")
 print(f"Max Drawdown: {results['max_drawdown']:.2%}")
 ```
 
+### Working with Notebooks
+
+All analysis notebooks are located in the `notebooks/` directory:
+
+- **Main Analysis**: `notebooks/main.ipynb` - Complete forex + commodities momentum strategy
+- **Forex Only**: `notebooks/momentum_long_only.ipynb` - Long-only momentum on forex pairs
+- **Contrarian Strategies**: `notebooks/contrarian_*.ipynb` - Various contrarian approaches
+- **Commodity Focus**: `notebooks/commodity_momentum_clean.ipynb` - Commodities-specific momentum
+
+### Data Download
+
+Use the scripts in the `scripts/` directory to download fresh market data:
+
+```bash
+# Download forex data
+python scripts/download_extended_data.py
+
+# Download commodity data  
+python scripts/download_extended_commodities.py
+```
+
 ### Jupyter Notebooks
 
 ```bash
 # Run main analysis
-jupyter notebook main.ipynb
+jupyter notebook notebooks/main.ipynb
 
 # Momentum-only strategy
-jupyter notebook momentum_long_only.ipynb
+jupyter notebook notebooks/momentum_long_only.ipynb
 
 # Strategy comparison
-jupyter notebook contrarian_strategy.ipynb
+jupyter notebook notebooks/contrarian_strategy.ipynb
+
+# Commodity momentum
+jupyter notebook notebooks/commodity_momentum_clean.ipynb
 ```
 
 ## 📊 Strategy Details
