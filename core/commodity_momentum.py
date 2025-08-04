@@ -355,9 +355,12 @@ def calculate_portfolio_performance(signals: pd.DataFrame, price_data: pd.DataFr
     signals_aligned = signals.copy()
     signals_aligned.columns = [c.replace('_weight', '') for c in signals_aligned.columns]
     
+    # CORREZIONE: Shifta i segnali di 1 giorno in avanti
+    # I pesi calcolati oggi vengono applicati ai rendimenti di domani
+    signals_shifted = signals_aligned.shift(1).fillna(0)
+    
     # Calcola rendimento del portafoglio
-    # Usa i pesi del giorno per i rendimenti del giorno (no shift aggiuntivo)
-    portfolio_returns = (signals_aligned * daily_returns).sum(axis=1)
+    portfolio_returns = (signals_shifted * daily_returns).sum(axis=1)
     
     # Calcola equity cumulativa
     equity = (1 + portfolio_returns).cumprod()
