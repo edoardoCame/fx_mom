@@ -42,6 +42,7 @@ applyTo: '**'
 - 4 agosto 2025: Implementata funzione download_extended_commodities_data in core/data_loader.py e script download_extended_commodities.py. File dati: data/commodities_extended_data.parquet.
 
 - 4 agosto 2025: Problema segnalato: equity curve piatta (zero rendimento) nella strategia momentum commodities. Obiettivo: identificare e correggere la causa, validare la soluzione. Prossimi step: ricerca Context7 su bug comuni strategie momentum pandas, debug pipeline dati e segnali, correzione logica se necessario.
+- 4 agosto 2025: Richiesta di creare un nuovo notebook che inverte la strategia momentum: invece di andare long sui top momentum, si va short (contrarian). Il resto della pipeline e della struttura deve rimanere il più simile possibile. Obiettivo: testare regime di mercato opposto.
 
 ## Notes
 - Aggiornare la memoria dopo ogni step
