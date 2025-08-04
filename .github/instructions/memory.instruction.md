@@ -16,6 +16,13 @@ applyTo: '**'
 - Architecture patterns: Moduli separati per data loading, signal generation, backtest
 - Key requirements: Scaricare dati delle commodities più famose e liquide da Yahoo Finance, salvarle in parquet in /data, mantenere coerenza con il modulo forex
 
+## Strategia Momentum Commodities (agosto 2025)
+- Feature: Strategia momentum top n ranking su commodities, vettorizzata, senza lookahead bias
+- Ribilanciamento settimanale ogni venerdì, pesi solo su asset con rendimento cumulativo positivo
+- Se nessuna commodity ha rendimento positivo, si resta in cash
+- Periodo di lookback configurabile
+- Implementazione in modulo separato, test rigoroso su dati reali
+
 ## Coding Patterns
 - Preferred patterns and practices: Funzioni modulari, salvataggio dati in parquet, uso di pandas
 - Code organization preferences: Moduli in /core, dati in /data
@@ -32,8 +39,12 @@ applyTo: '**'
 - 4 agosto 2025: Analisi codebase: il download forex reale avviene tramite yfinance in download_extended_forex_data (core/data_loader.py). Nessun download reale commodities esistente, solo dati sintetici.
 - 4 agosto 2025: Implementata funzione download_extended_commodities_data in core/data_loader.py e script download_extended_commodities.py. File dati: data/commodities_extended_data.parquet.
 
+- 4 agosto 2025: Problema segnalato: equity curve piatta (zero rendimento) nella strategia momentum commodities. Obiettivo: identificare e correggere la causa, validare la soluzione. Prossimi step: ricerca Context7 su bug comuni strategie momentum pandas, debug pipeline dati e segnali, correzione logica se necessario.
+
 ## Notes
 - Aggiornare la memoria dopo ogni step
 - Seguire pattern di download dati forex (yfinance, concat, parquet)
 - Nuovo modulo commodities: funzione download_extended_commodities_data, script download_extended_commodities.py, file dati data/commodities_extended_data.parquet
 - Istruzioni d’uso: importare e caricare con pd.read_parquet('data/commodities_extended_data.parquet') nei notebook
+
+Prossimo step: Esplorare struttura file commodities_extended_data.parquet, configurare ambiente Python, analizzare dati per strategia momentum
