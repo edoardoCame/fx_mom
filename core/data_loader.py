@@ -1,3 +1,90 @@
+
+"""
+Data Loading Module for Forex Momentum Trading System
+
+This module provides functions to load and validate forex price data.
+"""
+
+import pandas as pd
+import numpy as np
+from pathlib import Path
+from typing import Optional, List
+import yfinance as yf
+import warnings
+warnings.filterwarnings('ignore')
+
+def download_extended_commodities_data(start_date: str = "2000-01-01",
+                                      end_date: str = "2025-12-31",
+                                      save_path: str = "data/commodities_extended_data.parquet") -> pd.DataFrame:
+    """
+    Download extended commodity data from Yahoo Finance from 2000 to present.
+    
+    Parameters:
+    -----------
+    start_date : str
+        Start date in 'YYYY-MM-DD' format
+    end_date : str  
+        End date in 'YYYY-MM-DD' format
+    save_path : str
+        Path to save the downloaded data
+        
+    Returns:
+    --------
+    pd.DataFrame
+        Extended commodity price data with OHLC columns
+    """
+    # Major liquid commodity symbols (Yahoo Finance format)
+    commodity_symbols = [
+        ('GC=F', 'GOLD'),        # Gold
+        ('SI=F', 'SILVER'),      # Silver
+        ('CL=F', 'CRUDE_WTI'),   # Crude Oil WTI
+        ('BZ=F', 'CRUDE_BRENT'), # Brent Oil
+        ('NG=F', 'NATGAS'),      # Natural Gas
+        ('HG=F', 'COPPER'),      # Copper
+        ('PL=F', 'PLATINUM'),    # Platinum
+        ('PA=F', 'PALLADIUM'),   # Palladium
+        ('ZC=F', 'CORN'),        # Corn
+        ('ZS=F', 'SOYBEANS'),    # Soybeans
+        ('ZW=F', 'WHEAT'),       # Wheat
+        ('KC=F', 'COFFEE'),      # Coffee
+        ('SB=F', 'SUGAR'),       # Sugar
+        ('CT=F', 'COTTON'),      # Cotton
+    ]
+    print(f"📊 Downloading commodity data from {start_date} to {end_date}...")
+    print(f"🔄 Downloading {len(commodity_symbols)} commodities...")
+    all_data = {}
+    successful_downloads = 0
+    for i, (symbol, name) in enumerate(commodity_symbols):
+        try:
+            print(f"  📈 Downloading {symbol} as {name}... ({i+1}/{len(commodity_symbols)})")
+            ticker = yf.Ticker(symbol)
+            data = ticker.history(start=start_date, end=end_date)
+            if len(data) > 0:
+                # Rename columns to match our format
+                data.columns = [f"{name}_{col}" for col in data.columns]
+                all_data[name] = data
+                successful_downloads += 1
+                print(f"    ✓ Downloaded {len(data)} days of data")
+            else:
+                print(f"    ❌ No data available for {symbol}")
+        except Exception as e:
+            print(f"    ❌ Failed to download {symbol}: {str(e)}")
+            continue
+    if successful_downloads == 0:
+        raise ValueError("No commodity data could be downloaded!")
+    print(f"\n✅ Successfully downloaded {successful_downloads}/{len(commodity_symbols)} commodities")
+    print("🔄 Combining and synchronizing data...")
+    combined_data = pd.concat(all_data.values(), axis=1)
+    combined_data = combined_data.dropna(how='all')
+    combined_data = combined_data.fillna(method='ffill')
+    combined_data = combined_data.dropna(how='all')
+    combined_data.index = pd.to_datetime(combined_data.index)
+    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+    combined_data.to_parquet(save_path)
+    print(f"✅ Extended commodity data saved to: {save_path}")
+    print(f"📊 Final dataset: {len(combined_data):,} days, {len(combined_data.columns)} columns")
+    print(f"📅 Date range: {combined_data.index.min().date()} to {combined_data.index.max().date()}")
+    return combined_data
 """
 Data Loading Module for Forex Momentum Trading System
 
