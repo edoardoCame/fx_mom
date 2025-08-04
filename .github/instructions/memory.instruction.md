@@ -30,9 +30,11 @@ applyTo: '**'
 - Documentation style: Commenti inline e docstring
 
 ## Context7 Research History
-- Context7 non ha fornito documentazione aggiornata specifica per commodities Yahoo Finance, quindi si userà la libreria yfinance come per il forex.
+- Context7 non ha fornito documentazione aggiornata specifica per commodities Yahoo Finance, quindi si usa la libreria yfinance come per il forex.
 - Pattern di download: scaricare dati reali con yfinance, concatenare, sincronizzare, salvare in parquet (come in download_extended_forex_data).
-- Simboli commodities usati: GC=F (Gold), SI=F (Silver), CL=F (Crude Oil WTI), BZ=F (Brent), NG=F (NatGas), HG=F (Copper), PL=F (Platinum), PA=F (Palladium), ZC=F (Corn), ZS=F (Soybeans), ZW=F (Wheat), KC=F (Coffee), SB=F (Sugar), CT=F (Cotton).
+- Dal 4 agosto 2025: la funzione commodities ora scarica una lista estesa di future Yahoo Finance (agricoli, energetici, metalli, softs, livestock, lumber, ecc), validata da Wikipedia e pattern Yahoo (SYMBOL=F).
+- Edge case gestiti: commodities senza dati o con pochi dati vengono segnalate nel notebook.
+- Notebook aggiornato: mostra lista asset disponibili, gestisce errori di caricamento, verifica robustezza database.
 
 ## Conversation History
 - 4 agosto 2025: Richiesta di creare modulo per scaricare commodities da Yahoo Finance, salvarle in parquet in /data, ispirandosi al modulo forex

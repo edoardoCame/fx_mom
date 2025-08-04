@@ -33,22 +33,25 @@ def download_extended_commodities_data(start_date: str = "2000-01-01",
     pd.DataFrame
         Extended commodity price data with OHLC columns
     """
-    # Major liquid commodity symbols (Yahoo Finance format)
+    # Estesa: principali commodity future Yahoo Finance (agricoli, energetici, metalli, softs, livestock, lumber, ecc)
     commodity_symbols = [
-        ('GC=F', 'GOLD'),        # Gold
-        ('SI=F', 'SILVER'),      # Silver
-        ('CL=F', 'CRUDE_WTI'),   # Crude Oil WTI
-        ('BZ=F', 'CRUDE_BRENT'), # Brent Oil
-        ('NG=F', 'NATGAS'),      # Natural Gas
-        ('HG=F', 'COPPER'),      # Copper
-        ('PL=F', 'PLATINUM'),    # Platinum
-        ('PA=F', 'PALLADIUM'),   # Palladium
-        ('ZC=F', 'CORN'),        # Corn
-        ('ZS=F', 'SOYBEANS'),    # Soybeans
-        ('ZW=F', 'WHEAT'),       # Wheat
-        ('KC=F', 'COFFEE'),      # Coffee
-        ('SB=F', 'SUGAR'),       # Sugar
-        ('CT=F', 'COTTON'),      # Cotton
+        # Metalli preziosi
+        ('GC=F', 'GOLD'), ('SI=F', 'SILVER'), ('PL=F', 'PLATINUM'), ('PA=F', 'PALLADIUM'),
+        # Metalli industriali
+        ('HG=F', 'COPPER'),
+        # Energia
+        ('CL=F', 'CRUDE_WTI'), ('BZ=F', 'CRUDE_BRENT'), ('NG=F', 'NATGAS'), ('HO=F', 'HEATING_OIL'), ('RB=F', 'GASOLINE'),
+        # Agricoli - grains
+        ('ZC=F', 'CORN'), ('ZW=F', 'WHEAT'), ('ZS=F', 'SOYBEANS'), ('ZM=F', 'SOYMEAL'), ('ZL=F', 'SOYOIL'), ('ZO=F', 'OATS'), ('ZR=F', 'ROUGH_RICE'),
+        # Soft commodities
+        ('KC=F', 'COFFEE'), ('SB=F', 'SUGAR'), ('CT=F', 'COTTON'), ('OJ=F', 'ORANGE_JUICE'), ('CC=F', 'COCOA'),
+        # Livestock
+        ('LE=F', 'LIVE_CATTLE'), ('HE=F', 'LEAN_HOGS'), ('GF=F', 'FEEDER_CATTLE'),
+        # Altri
+        ('LBS=F', 'LUMBER'),
+        # Extra: commodities globali (alcuni potrebbero non avere dati completi)
+        ('RTY=F', 'RUSSELL_2000_MINI'), # esempio future indice, da filtrare se non serve
+        ('F=F', 'FORD_FUTURE'), # esempio, da filtrare se non serve
     ]
     print(f"📊 Downloading commodity data from {start_date} to {end_date}...")
     print(f"🔄 Downloading {len(commodity_symbols)} commodities...")
