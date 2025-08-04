@@ -600,27 +600,27 @@ def simulate_portfolio_numba(returns_matrix: np.ndarray,
     portfolio_value[0] = current_value
     
     for day in range(n_days):
-        # Check if it's a rebalancing day
-        is_rebalance_day = (day % rebalance_freq == 0) or (day == 0)
-        
-        if is_rebalance_day and day < n_days - 1:  # Don't rebalance on last day
-            # Get target positions from signals
-            target_positions = signals_matrix[day] * leverage
-            
-            # Update positions
-            current_positions = target_positions.copy()
-        
-        # Store current positions
+        # Store current positions BEFORE any changes
         positions[day] = current_positions.copy()
         
         # Calculate daily portfolio return if not first day
         if day > 0:
-            # Calculate return from positions
+            # Calculate return from positions held YESTERDAY
             daily_return = np.sum(current_positions * returns_matrix[day])
             portfolio_returns[day] = daily_return
             
             # Update portfolio value
             current_value = current_value * (1 + daily_return)
+        
+        # Check if it's a rebalancing day (AFTER calculating returns)
+        is_rebalance_day = (day % rebalance_freq == 0) or (day == 0)
+        
+        if is_rebalance_day and day < n_days - 1:  # Don't rebalance on last day
+            # Get target positions from signals for NEXT day
+            target_positions = signals_matrix[day] * leverage
+            
+            # Update positions for NEXT day
+            current_positions = target_positions.copy()
         
         portfolio_value[day] = current_value
     

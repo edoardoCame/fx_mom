@@ -165,9 +165,28 @@ def generate_momentum_signals(price_data: pd.DataFrame, lookback_days: int = 30,
             else:
                 next_idx = current_idx + 1
             
-            # Apply signals for the period STARTING FROM NEXT DAY (avoid lookahead bias)
+            # Apply signals for the period STARTING FROM NEXT TRADING DAY (avoid lookahead bias)
             # Signals calculated on Friday should be applied starting from Monday
-            period_range = price_data.index[current_idx+1:next_idx]
+            # For weekly rebalancing, ensure at least 1 trading day gap
+            if rebalance_freq == 'weekly':
+                # For weekly: signals calculated on Friday (weekday 4) should apply from next Monday
+                # Find next Monday or first trading day after weekend
+                start_application_idx = current_idx + 1
+                while (start_application_idx < len(price_data) and 
+                       price_data.index[start_application_idx].weekday() > 4):  # Skip weekends
+                    start_application_idx += 1
+                
+                # If Friday signal, make sure to skip to at least Monday
+                if price_data.index[current_idx].weekday() == 4:  # Friday
+                    # Find next Monday (weekday 0)
+                    while (start_application_idx < len(price_data) and 
+                           price_data.index[start_application_idx].weekday() != 0):
+                        start_application_idx += 1
+                
+                period_range = price_data.index[start_application_idx:next_idx]
+            else:
+                # For daily rebalancing, still apply from next day
+                period_range = price_data.index[current_idx+1:next_idx]
             
             for period_date in period_range:
                 if period_date in signals.index:
